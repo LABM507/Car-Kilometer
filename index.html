@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CarTracker - Control de Kilometraje</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style id="app-style">
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #f8f5f2;
+            color: #333;
+        }
+        .card {
+            border-radius: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background-color: #f87171;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #ef4444;
+            transform: translateY(-2px);
+        }
+        .btn-secondary {
+            background-color: #94a3b8;
+            transition: all 0.3s ease;
+        }
+        .btn-secondary:hover {
+            background-color: #64748b;
+            transform: translateY(-2px);
+        }
+        .maintenance-alert {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+        }
+        .license-plate {
+            background-color: #fff;
+            border: 2px solid #000;
+            font-weight: bold;
+            letter-spacing: 1px;
+            display: inline-block;
+            padding: 4px 10px;
+        }
+        .input-error {
+            border-color: #ef4444;
+        }
+        .input-warning {
+            border-color: #f59e0b;
+        }
+        .warning-message {
+            color: #92400e;
+        }
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .slide-in {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .maintenance-badge { background-color: #fef3c7; color: #92400e; }
+        .maintenance-icon { color: #f59e0b; }
+        .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div id="app" class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="mb-8 text-center">
+            <div class="inline-block p-2 bg-red-500 text-white rounded-lg mb-4">
+                <i class="fas fa-car-side text-3xl"></i>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">CarTracker</h1>
+            <p class="text-gray-600">Controla el mantenimiento de tu vehículo con facilidad</p>
+        </header>
+
+        <div id="vehicle-selector" class="card bg-white p-6 md:p-8 mb-8 hidden">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">Mis Vehículos</h2>
+                <button id="add-vehicle-btn" class="btn-primary text-white py-2 px-4 rounded-lg text-sm mt-2 md:mt-0">
+                    <i class="fas fa-plus mr-2"></i> Agregar Vehículo
+                </button>
+            </div>
+            <div id="vehicles-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <p class="text-gray-500 text-center py-4 col-span-2">No hay vehículos registrados aún</p>
+            </div>
+        </div>
+
+        <div id="registration-form" class="card bg-white p-6 md:p-8 mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Agregar Nuevo Vehículo</h2>
+            <form id="vehicle-form" class="space-y-4">
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nombre Completo</label>
+                    <input type="text" id="name" name="name" class="w-full px-4 py-2 border rounded-lg focus:ring-red-500 focus:border-red-500" required>
+                    <p class="text-red-500 text-sm mt-1 hidden error-message" id="name-error">El nombre es requerido</p>
+                </div>
+                <div>
+                    <label for="idNumber" class="block text-sm font-medium text-gray-700 mb-1">Número de Cédula</label>
+                    <input type="text" id="idNumber" name="idNumber" class="w-full px-4 py-2 border rounded-lg focus:ring-red-500 focus:border-red-500" required>
+                    <p class="text-red-500 text-sm mt-1 hidden error-message" id="idNumber-error">La cédula es requerida</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="model" class="block text-sm font-medium text-gray-700 mb-1">Modelo del Vehículo</label>
+                        <input type="text" id="model" name="model" class="w-full px-4 py-2 border rounded-lg focus:ring-red-500 focus:border-red-500" required>
+                        <p class="text-red-500 text-sm mt-1 hidden error-message" id="model-error">El modelo es requerido</p>
+                    </div>
+                    <div>
+                        <label for="year" class="block text-sm font-medium text-gray-700 mb-1">Año</label>
+                        <input type="number" id="year" name="year" min="1900" max="2025" class="w-full px-4 py-2 border rounded-lg focus:ring-red-500 focus:border-red-500" required>
+                        <p class="text-red-500 text-sm mt-1 hidden error-message" id="year-error">Ingrese un año válido</p>
+                    </div>
+                </div>
+                <div>
+                    <label for="licensePlate" class="block text-sm font-medium text-gray-700 mb-1">Placa (letras y números en mayúscula)</label>
+                    <input type="text" id="licensePlate" name="licensePlate" class="w-full px-4 py-2 border rounded-lg focus:ring-red-500 focus:border-red-500 uppercase" required maxlength="8">
+                    <p class="text-red-500 text-sm mt-1 hidden error-message" id="licensePlate-error">Ingrese una placa válida (sólo letras y números)</p>
+                </div>
+                <div>
+                    <label for="initialMileage" class="block text-sm font-medium text-gray-700 mb-1">Kilometraje Inicial</label>
+                    <input type="number" id="initialMileage" name="initialMileage" min="0" class="w-full px-4 py-2 border rounded-lg focus:ring-red-500 focus:border-red-500" required>
+                    <p class="text-red-500 text-sm mt-1 hidden error-message" id="initialMileage-error">Ingrese un kilometraje válido</p>
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full btn-primary text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center">
+                        <span id="submit-text">Guardar y Continuar</span>
+                        <span id="loading-spinner" class="hidden ml-2">
+                            <i class="fas fa-circle-notch spinner"></i>
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div id="dashboard" class="hidden">
+            <div class="card bg-white p-6 mb-6 slide-in">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800" id="dashboard-name"></h2>
+                        <div class="flex items-center flex-wrap gap-2 mt-2">
+                            <span class="text-gray-600" id="dashboard-model-year"></span>
+                            <span class="license-plate" id="dashboard-license-plate"></span>
+                        </div>
+                    </div>
+                    <div class="mt-4 md:mt-0">
+                        <button id="settings-btn" class="btn-secondary text-white py-2 px-4 rounded-lg text-sm">
+                            <i class="fas fa-cog mr-2"></i> Configuración
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card bg-white p-6 mb-6 slide-in">
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">Kilometraje Actual</h3>
+                <div class="bg-gray-100 p-4 rounded-lg mb-6">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-500">Lectura Actual:</span>
+                        <span class="text-2xl font-bold text-gray-800" id="current-mileage">0 km</span>
+                    </div>
+                </div>
+
+                <form id="new-mileage-form" class="space-y-4">
+                    <div>
+                        <label for="newMileage" class="block text-sm font-medium text-gray-700 mb-1">Nueva Lectura de Kilometraje</label>
+                        <input type="number" id="newMileage" name="newMileage" min="0" class="w-full px-4 py-2 border rounded-lg focus:ring-red-500 focus:border-red-500" required>
+                        <p class="text-red-500 text-sm mt-1 hidden" id="newMileage-error">El kilometraje debe ser mayor que el anterior</p>
+                        <p class="warning-message text-sm mt-1 hidden" id="newMileage-warning">Kilometraje inferior al último, pero será guardado</p>
+                    </div>
+
+                    <button type="submit" class="w-full btn-primary text-white py-3 px-4 rounded-lg font-medium flex items-center justify-center">
+                        <span>Actualizar Kilometraje</span>
+                        <span id="update-spinner" class="hidden ml-2">
+                            <i class="fas fa-circle-notch spinner"></i>
+                        </span>
+                    </button>
+                </form>
+            </div>
+
+            <div class="card bg-white p-6 slide-in">
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">Historial de Mantenimiento</h3>
+                <div id="maintenance-history" class="max-h-80 overflow-y-auto space-y-3 p-1">
+                    <p class="text-gray-500 text-center py-4">No hay registros de mantenimiento aún</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="maintenance-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white rounded-lg max-w-md w-full p-6 slide-in mx-4">
+                <div class="text-center">
+                    <div class="inline-block p-3 bg-yellow-100 rounded-full mb-4">
+                        <i class="fas fa-wrench text-yellow-500 text-3xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">¡Alerta de Mantenimiento!</h3>
+                    <p class="text-gray-600 mb-6" id="maintenance-message">
+                        Tu vehículo ha alcanzado los 5000 km desde el último mantenimiento.
+                        Es recomendable llevarlo al taller para revisión.
+                    </p>
+                    <button id="close-modal" class="btn-primary text-white py-2 px-6 rounded-lg">
+                        Entendido
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+            <div class="bg-white rounded-lg max-w-md w-full p-6 slide-in mx-4">
+                <h3 class="text-xl font-bold mb-4">Configuración</h3>
+                <div class="space-y-4">
+                    <div class="border-t border-b py-4">
+                        <button id="delete-vehicle" class="flex items-center text-red-500 hover:text-red-700 mb-3">
+                            <i class="fas fa-trash mr-2"></i> Eliminar este vehículo
+                        </button>
+                        <button id="reset-app" class="flex items-center text-red-500 hover:text-red-700">
+                            <i class="fas fa-trash-alt mr-2"></i> Reiniciar aplicación
+                        </button>
+                        <p class="text-sm text-gray-500 mt-1">Esto borrará todos los datos guardados</p>
+                    </div>
+                    <div class="text-right">
+                        <button id="close-settings" class="btn-secondary text-white py-2 px-4 rounded-lg text-sm">
+                            Cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script id="app-script">
+        document.addEventListener('DOMContentLoaded', () => {
+            const registrationForm = document.getElementById('registration-form');
+            const dashboard = document.getElementById('dashboard');
+            const vehicleSelector = document.getElementById('vehicle-selector');
+            const vehicleForm = document.getElementById('vehicle-form');
+            const newMileageForm = document.getElementById('new-mileage-form');
+            const maintenanceModal = document.getElementById('maintenance-modal');
+            const closeModal = document.getElementById('close-modal');
+            const settingsBtn = document.getElementById('settings-btn');
+            const settingsModal = document.getElementById('settings-modal');
+            const closeSettings = document.getElementById('close-settings');
+            const resetApp = document.getElementById('reset-app');
+            const deleteVehicle = document.getElementById('delete-vehicle');
+            const addVehicleBtn = document.getElementById('add-vehicle-btn');
+            const vehiclesList = document.getElementById('vehicles-list');
+
+            initializeApp();
+
+            vehicleForm.addEventListener('submit', handleVehicleRegistration);
+            newMileageForm.addEventListener('submit', handleMileageUpdate);
+            closeModal.addEventListener('click', () => maintenanceModal.classList.add('hidden'));
+            settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+            closeSettings.addEventListener('click', () => settingsModal.classList.add('hidden'));
+            resetApp.addEventListener('click', resetApplication);
+            deleteVehicle.addEventListener('click', deleteCurrentVehicle);
+            addVehicleBtn.addEventListener('click', showRegistrationForm);
+
+            function loadVehicles() {
+                return JSON.parse(localStorage.getItem('carTrackerVehicles')) || [];
+            }
+            function saveVehicles(vehicles) {
+                localStorage.setItem('carTrackerVehicles', JSON.stringify(vehicles));
+            }
+            function loadCurrentVehicleId() {
+                return localStorage.getItem('carTrackerCurrentVehicle');
+            }
+            function saveCurrentVehicleId(id) {
+                localStorage.setItem('carTrackerCurrentVehicle', id);
+            }
+            function getCurrentVehicle() {
+                const vehicles = loadVehicles();
+                const currentId = loadCurrentVehicleId();
+                return vehicles.find(v => v.id === currentId) || null;
+            }
+
+            function initializeApp() {
+                const vehicles = loadVehicles();
+                if (vehicles.length > 0) {
+                    let currentVehicle = getCurrentVehicle();
+                    if (!currentVehicle) {
+                        saveCurrentVehicleId(vehicles[0].id);
+                        currentVehicle = vehicles[0];
+                    }
+                    updateVehiclesList();
+                    displayDashboard(currentVehicle);
+                    vehicleSelector.classList.remove('hidden');
+                    dashboard.classList.remove('hidden');
+                    registrationForm.classList.add('hidden');
+                } else {
+                    vehicleSelector.classList.add('hidden');
+                    dashboard.classList.add('hidden');
+                    registrationForm.classList.remove('hidden');
+                }
+            }
+
+            function updateVehiclesList() {
+                const vehicles = loadVehicles();
+                const currentVehicleId = loadCurrentVehicleId();
+                vehiclesList.innerHTML = '';
+                if (vehicles.length === 0) {
+                    const empty = document.createElement('p');
+                    empty.className = 'text-gray-500 text-center py-4 col-span-2';
+                    empty.textContent = 'No hay vehículos registrados aún';
+                    vehiclesList.appendChild(empty);
+                    return;
+                }
+                vehicles.forEach(vehicle => {
+                    const vehicleCard = document.createElement('div');
+                    vehicleCard.className = `p-4 rounded-lg cursor-pointer border-2 ${vehicle.id === currentVehicleId ? 'border-red-500 bg-red-50' : 'border-gray-200 bg-white hover:bg-gray-50'}`;
+                    vehicleCard.dataset.vehicleId = vehicle.id;
+                    const lastMileageRecord = vehicle.mileageRecords[vehicle.mileageRecords.length - 1];
+                    vehicleCard.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <span class="license-plate">${vehicle.profile.licensePlate}</span>
+                                <div class="mt-2 font-semibold">${vehicle.profile.model} ${vehicle.profile.year}</div>
+                                <div class="text-sm text-gray-600">${lastMileageRecord.mileage.toLocaleString()} km</div>
+                            </div>
+                            <div>
+                                ${vehicle.id === currentVehicleId ? '<span class="text-red-500"><i class="fas fa-check-circle"></i></span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                    vehicleCard.addEventListener('click', () => selectVehicle(vehicle.id));
+                    vehiclesList.appendChild(vehicleCard);
+                });
+            }
+
+            function selectVehicle(vehicleId) {
+                const vehicles = loadVehicles();
+                const selectedVehicle = vehicles.find(v => v.id === vehicleId);
+                if (selectedVehicle) {
+                    saveCurrentVehicleId(vehicleId);
+                    updateVehiclesList();
+                    displayDashboard(selectedVehicle);
+                }
+            }
+
+            function showRegistrationForm() {
+                vehicleForm.reset();
+                ['name','idNumber','model','year','licensePlate','initialMileage'].forEach(id => {
+                    const el = document.getElementById(id);
+                    el.classList.remove('input-error','input-warning','shake');
+                    const err = document.getElementById(`${id}-error`);
+                    if (err) err.classList.add('hidden');
+                });
+                registrationForm.classList.remove('hidden');
+                dashboard.classList.add('hidden');
+            }
+
+            function displayDashboard(vehicle) {
+                dashboard.classList.remove('hidden');
+                registrationForm.classList.add('hidden');
+                document.getElementById('dashboard-name').textContent = vehicle.profile.name;
+                document.getElementById('dashboard-model-year').textContent = `${vehicle.profile.model} ${vehicle.profile.year}`;
+                document.getElementById('dashboard-license-plate').textContent = vehicle.profile.licensePlate;
+                const lastMileageRecord = vehicle.mileageRecords[vehicle.mileageRecords.length - 1];
+                document.getElementById('current-mileage').textContent = `${lastMileageRecord.mileage.toLocaleString()} km`;
+                updateMileageHistory(vehicle.mileageRecords);
+            }
+
+            function handleVehicleRegistration(e) {
+                e.preventDefault();
+                const submitBtn = vehicleForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                document.getElementById('submit-text').textContent = 'Guardando...';
+                document.getElementById('loading-spinner').classList.remove('hidden');
+                document.querySelectorAll('.error-message').forEach(el => el.classList.add('hidden'));
+                const yearValue = parseInt(document.getElementById('year').value, 10);
+                const formData = {
+                    name: document.getElementById('name').value.trim(),
+                    idNumber: document.getElementById('idNumber').value.trim(),
+                    model: document.getElementById('model').value.trim(),
+                    year: yearValue,
+                    licensePlate: document.getElementById('licensePlate').value.trim().toUpperCase(),
+                    initialMileage: parseInt(document.getElementById('initialMileage').value, 10)
+                };
+                let isValid = true;
+                if (!formData.name) { showError('name', 'El nombre es requerido'); isValid = false; }
+                if (!formData.idNumber) { showError('idNumber', 'La cédula es requerida'); isValid = false; }
+                if (!formData.model) { showError('model', 'El modelo es requerido'); isValid = false; }
+                if (isNaN(formData.year) || formData.year < 1900 || formData.year > 2025) { showError('year', 'Ingrese un año válido (1900-2025)'); isValid = false; }
+                if (!formData.licensePlate || !/^[A-Z0-9]+$/.test(formData.licensePlate)) { showError('licensePlate', 'Ingrese una placa válida (sólo letras y números)'); isValid = false; }
+                if (isNaN(formData.initialMileage) || formData.initialMileage < 0) { showError('initialMileage', 'Ingrese un kilometraje válido'); isValid = false; }
+                if (!isValid) {
+                    submitBtn.disabled = false;
+                    document.getElementById('submit-text').textContent = 'Guardar y Continuar';
+                    document.getElementById('loading-spinner').classList.add('hidden');
+                    return;
+                }
+                setTimeout(() => {
+                    const newVehicle = {
+                        id: Date.now().toString(),
+                        profile: {
+                            name: formData.name,
+                            idNumber: formData.idNumber,
+                            model: formData.model,
+                            year: formData.year,
+                            licensePlate: formData.licensePlate
+                        },
+                        mileageRecords: [
+                            { mileage: formData.initialMileage, timestamp: new Date().toISOString(), isMaintenance: false }
+                        ]
+                    };
+                    const vehicles = loadVehicles();
+                    vehicles.push(newVehicle);
+                    saveVehicles(vehicles);
+                    saveCurrentVehicleId(newVehicle.id);
+                    vehicleSelector.classList.remove('hidden');
+                    updateVehiclesList();
+                    displayDashboard(newVehicle);
+                    vehicleForm.reset();
+                    submitBtn.disabled = false;
+                    document.getElementById('submit-text').textContent = 'Guardar y Continuar';
+                    document.getElementById('loading-spinner').classList.add('hidden');
+                }, 1000);
+            }
+
+            function handleMileageUpdate(e) {
+                e.preventDefault();
+                const submitBtn = newMileageForm.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                document.getElementById('update-spinner').classList.remove('hidden');
+                document.getElementById('newMileage-error').classList.add('hidden');
+                document.getElementById('newMileage-warning').classList.add('hidden');
+                document.getElementById('newMileage').classList.remove('input-error', 'input-warning');
+                const newMileageInput = document.getElementById('newMileage');
+                const newMileage = parseInt(newMileageInput.value, 10);
+                const currentVehicle = getCurrentVehicle();
+                if (!currentVehicle) return;
+                const lastMileageRecord = currentVehicle.mileageRecords[currentVehicle.mileageRecords.length - 1];
+                if (isNaN(newMileage) || newMileage < 0) {
+                    document.getElementById('newMileage-error').textContent = 'Ingrese un kilometraje válido';
+                    document.getElementById('newMileage-error').classList.remove('hidden');
+                    document.getElementById('newMileage').classList.add('input-error', 'shake');
+                    submitBtn.disabled = false;
+                    document.getElementById('update-spinner').classList.add('hidden');
+                    setTimeout(() => { document.getElementById('newMileage').classList.remove('shake'); }, 500);
+                    return;
+                }
+                if (newMileage < lastMileageRecord.mileage) {
+                    document.getElementById('newMileage-warning').classList.remove('hidden');
+                    document.getElementById('newMileage').classList.add('input-warning');
+                }
+                setTimeout(() => {
+                    const currentHighestMileage = Math.max(...currentVehicle.mileageRecords.map(record => record.mileage));
+                    const lastMaintenanceBoundary = Math.floor(currentHighestMileage / 5000) * 5000;
+                    const newMaintenanceBoundary = Math.floor(newMileage / 5000) * 5000;
+                    const isMaintenance = newMaintenanceBoundary > lastMaintenanceBoundary;
+                    const newRecord = { mileage: newMileage, timestamp: new Date().toISOString(), isMaintenance };
+                    const vehicles = loadVehicles();
+                    const vehicleIndex = vehicles.findIndex(v => v.id === currentVehicle.id);
+                    if (vehicleIndex >= 0) {
+                        vehicles[vehicleIndex].mileageRecords.push(newRecord);
+                        saveVehicles(vehicles);
+                        document.getElementById('current-mileage').textContent = `${newMileage.toLocaleString()} km`;
+                        updateMileageHistory(vehicles[vehicleIndex].mileageRecords);
+                        updateVehiclesList();
+                        if (isMaintenance) {
+                            maintenanceModal.classList.remove('hidden');
+                            document.getElementById('maintenance-message').textContent = `¡Felicidades! Tu vehículo ha superado el hito de ${newMaintenanceBoundary} km. Es momento de realizar la revisión periódica de 5000 km.`;
+                        }
+                    }
+                    newMileageForm.reset();
+                    submitBtn.disabled = false;
+                    document.getElementById('update-spinner').classList.add('hidden');
+                }, 1000);
+            }
+
+            function deleteCurrentVehicle() {
+                const currentId = loadCurrentVehicleId();
+                if (!currentId) return;
+                if (confirm('¿Estás seguro de eliminar este vehículo? Sus datos serán borrados.')) {
+                    let vehicles = loadVehicles();
+                    vehicles = vehicles.filter(v => v.id !== currentId);
+                    saveVehicles(vehicles);
+                    localStorage.removeItem('carTrackerCurrentVehicle');
+                    settingsModal.classList.add('hidden');
+                    initializeApp();
+                }
+            }
+
+            function resetApplication() {
+                if (confirm('¿Estás seguro de reiniciar la aplicación? Todos los datos serán borrados.')) {
+                    localStorage.removeItem('carTrackerVehicles');
+                    localStorage.removeItem('carTrackerCurrentVehicle');
+                    settingsModal.classList.add('hidden');
+                    dashboard.classList.add('hidden');
+                    vehicleSelector.classList.add('hidden');
+                    registrationForm.classList.remove('hidden');
+                    vehicleForm.reset();
+                    newMileageForm.reset();
+                }
+            }
+
+            function updateMileageHistory(mileageRecords) {
+                const historyContainer = document.getElementById('maintenance-history');
+                historyContainer.innerHTML = '';
+                if (!mileageRecords || mileageRecords.length === 0) {
+                    const empty = document.createElement('p');
+                    empty.className = 'text-gray-500 text-center py-4';
+                    empty.textContent = 'No hay registros de mantenimiento aún';
+                    historyContainer.appendChild(empty);
+                    return;
+                }
+                const sortedRecords = [...mileageRecords].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                sortedRecords.forEach((record, index) => {
+                    const date = new Date(record.timestamp);
+                    const formattedDate = date.toLocaleDateString('es-ES', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    const prevRecord = sortedRecords[index + 1];
+                    const kmDelta = prevRecord ? record.mileage - prevRecord.mileage : 0;
+                    const recordElement = document.createElement('div');
+                    recordElement.className = `p-4 bg-gray-50 rounded-lg flex items-center justify-between ${record.isMaintenance ? 'maintenance-alert' : ''}`;
+                    recordElement.innerHTML = `
+                        <div>
+                            <div class="text-sm text-gray-500">${formattedDate}</div>
+                            <div class="font-semibold">${record.mileage.toLocaleString()} km</div>
+                            ${prevRecord ? `<div class="text-xs text-gray-500">+${kmDelta.toLocaleString()} km recorridos</div>` : `<div class="text-xs text-gray-500">Lectura Inicial</div>`}
+                        </div>
+                        <div>
+                            ${record.isMaintenance ? `<span class="maintenance-badge px-2 py-1 rounded-full text-xs font-medium"><i class="fas fa-wrench maintenance-icon mr-1"></i>Mantenimiento Requerido</span>` : ''}
+                        </div>
+                    `;
+                    historyContainer.appendChild(recordElement);
+                });
+            }
+
+            function showError(fieldId, message) {
+                const errorElement = document.getElementById(`${fieldId}-error`);
+                errorElement.textContent = message;
+                errorElement.classList.remove('hidden');
+                document.getElementById(fieldId).classList.add('input-error', 'shake');
+                setTimeout(() => { document.getElementById(fieldId).classList.remove('shake'); }, 500);
+            }
+        });
+    </script>
+</body>
+</html>
