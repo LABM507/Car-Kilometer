@@ -120,9 +120,9 @@
             <h2 class="text-2xl font-bold mb-6 text-gray-800">Agregar Nuevo Vehículo</h2>
             <form id="vehicle-form" class="space-y-4">
                 <div>
-                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nombre Completo</label>
-                    <input type="text" id="name" name="name" class="w-full px-4 py-2 border rounded-lg focus:ring-red-500 focus:border-red-500" required>
-                    <p class="text-red-500 text-sm mt-1 hidden error-message" id="name-error">El nombre es requerido</p>
+                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Nombre del propietario</label>
+                    <input type="text" id="name" name="name" class="w-full px-4 py-2 border rounded-lg bg-gray-100" placeholder="Se toma de tu perfil" disabled>
+                    <p class="text-gray-500 text-xs mt-1">Se usa el nombre de tu sesión. Edita tu nombre al cerrar sesión y registrarte de nuevo.</p>
                 </div>
                 <div>
                     <label for="idNumber" class="block text-sm font-medium text-gray-700 mb-1">Número de Cédula</label>
@@ -674,6 +674,16 @@
                     const err = document.getElementById(`${id}-error`);
                     if (err) err.classList.add('hidden');
                 });
+                // Prefill owner name from current session and keep it disabled
+                try {
+                    const users = loadUsers();
+                    const uid = currentUserId();
+                    const u = users.find(x => x.id === uid);
+                    if (u) {
+                        const nameInput = document.getElementById('name');
+                        if (nameInput) nameInput.value = u.name;
+                    }
+                } catch (e) {}
                 registrationForm.classList.remove('hidden');
                 dashboard.classList.add('hidden');
             }
@@ -699,7 +709,12 @@
                 document.querySelectorAll('.error-message').forEach(el => el.classList.add('hidden'));
                 const yearValue = parseInt(document.getElementById('year').value, 10);
                 const formData = {
-                    name: document.getElementById('name').value.trim(),
+                    name: (function(){
+                        const users = loadUsers();
+                        const uid = currentUserId();
+                        const u = users.find(x => x.id === uid);
+                        return u ? u.name : (document.getElementById('name').value || '').trim();
+                    })(),
                     idNumber: document.getElementById('idNumber').value.trim(),
                     model: document.getElementById('model').value.trim(),
                     year: yearValue,
@@ -707,7 +722,7 @@
                     initialMileage: parseInt(document.getElementById('initialMileage').value, 10)
                 };
                 let isValid = true;
-                if (!formData.name) { showError('name', 'El nombre es requerido'); isValid = false; }
+                // Name comes from the logged-in user; no manual validation needed
                 if (!formData.idNumber) { showError('idNumber', 'La cédula es requerida'); isValid = false; }
                 if (!formData.model) { showError('model', 'El modelo es requerido'); isValid = false; }
                 if (isNaN(formData.year) || formData.year < 1900 || formData.year > 2025) { showError('year', 'Ingrese un año válido (1900-2025)'); isValid = false; }
@@ -807,7 +822,9 @@
                     let vehicles = loadVehicles();
                     vehicles = vehicles.filter(v => v.id !== currentId);
                     saveVehicles(vehicles);
-                    localStorage.removeItem('carTrackerCurrentVehicle');
+                    // remove namespaced current vehicle key
+                    const key = userKey('currentVehicle');
+                    localStorage.removeItem(key);
                     settingsModal.classList.add('hidden');
                     initializeApp();
                 }
@@ -815,8 +832,10 @@
 
             function resetApplication() {
                 if (confirm('¿Estás seguro de reiniciar la aplicación? Todos los datos serán borrados.')) {
-                    localStorage.removeItem('carTrackerVehicles');
-                    localStorage.removeItem('carTrackerCurrentVehicle');
+                    const keyVehicles = userKey('vehicles');
+                    const keyCurrent = userKey('currentVehicle');
+                    localStorage.removeItem(keyVehicles);
+                    localStorage.removeItem(keyCurrent);
                     settingsModal.classList.add('hidden');
                     dashboard.classList.add('hidden');
                     vehicleSelector.classList.add('hidden');
